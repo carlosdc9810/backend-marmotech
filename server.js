@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 console.log("EMAIL_USER:", process.env.EMAIL_USER);
+console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "OK" : "NO EXISTE");
 console.log(" NUEVA VERSION BACKEND ");
 console.log("INICIANDO SERVIDOR...");
 const express = require("express");
