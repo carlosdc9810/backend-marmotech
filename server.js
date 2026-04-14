@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-console.log("EMAIL_USER:", process.env.EMAIL_USER);
+console.log("EMAIL_USER:", process.env.EMAIL_USER); 
 console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "OK" : "NO EXISTE");
 console.log(" NUEVA VERSION BACKEND ");
 console.log("INICIANDO SERVIDOR...");
@@ -9,31 +9,9 @@ const mysql = require("mysql2");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
+const axios = require("axios");
 
 
-
-const transporter = nodemailer.createTransport({
-    host: "smtp-relay.brevo.com",
-    port: 587,
-    secure: false,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    tls: {
-        rejectUnauthorized: false
-    },
-    connectionTimeout: 10000
-});
-
-transporter.verify((error, success) => {
-    if (error) {
-        console.log("❌ Error SMTP:", error);
-    } else {
-        console.log("✅ SMTP listo");
-    }
-});
 
 const app = express();
 app.use(cors());
@@ -823,8 +801,9 @@ app.delete("/usuarios/:id", (req, res) => {
         }
     );
 });
+
 // ===============================
-// Enviar correo
+// Enviar correo (RECUPERACIÓN)
 // ===============================
 app.post("/recuperar-password", (req, res) => {
     const { username, email } = req.body;
@@ -836,11 +815,11 @@ app.post("/recuperar-password", (req, res) => {
         });
     }
 
-    // Buscar usuario con ese username Y email
+    // Buscar usuario
     db.query(
         "SELECT * FROM usuarios WHERE username = ? AND email = ?",
         [username, email],
-        (err, result) => {
+        async (err, result) => {
 
             if (err) {
                 console.error("Error en recuperación:", err);
@@ -849,7 +828,6 @@ app.post("/recuperar-password", (req, res) => {
                 });
             }
 
-            //  No coincide usuario + correo
             if (result.length === 0) {
                 return res.json({
                     mensaje: "Usuario o correo incorrecto ❌"
@@ -858,14 +836,15 @@ app.post("/recuperar-password", (req, res) => {
 
             const user = result[0];
 
-            //  Generar token
+            // Generar token
             const token = crypto.randomBytes(32).toString("hex");
 
-            // Guardar token en BD
+            // Guardar token
             db.query(
                 "UPDATE usuarios SET reset_token = ?, reset_expira = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE id = ?",
                 [token, user.id],
-                (err2) => {
+                async (err2) => {
+
                     if (err2) {
                         console.error("Error guardando token:", err2);
                         return res.status(500).json({
@@ -873,33 +852,51 @@ app.post("/recuperar-password", (req, res) => {
                         });
                     }
 
-                    //  Link de recuperación
                     const link = `${process.env.FRONTEND_URL}/reset-password.html?token=${token}`;
 
-                    // 📩 Enviar correo
-                    transporter.sendMail({
-                        from: `"Sistema Marmotech" <${process.env.EMAIL_USER}>`,
-                        to: user.email,
-                        subject: "Recuperación de contraseña",
-                        html: `
-                            <h3>Recuperar contraseña</h3>
-                            <p>Hola ${user.username},</p>
-                            <p>Haz clic en el siguiente enlace:</p>
-                            <a href="${link}">Restablecer contraseña</a>
-                            <p>Este enlace expira en 15 minutos.</p>
-                        `
-                    }, (error, info) => {
-                        if (error) {
-                            console.error("Error enviando correo:", error);
-                            return res.status(500).json({
-                                mensaje: "Error enviando correo ❌"
-                            });
-                        }
+                    // 📩 ENVÍO CON BREVO API (AQUÍ ESTÁ LA SOLUCIÓN)
+                    try {
+                        await axios.post(
+                            "https://api.brevo.com/v3/smtp/email",
+                            {
+                                sender: {
+                                    name: "Sistema Marmotech",
+                                    email: process.env.EMAIL_USER
+                                },
+                                to: [
+                                    {
+                                        email: user.email,
+                                        name: user.username
+                                    }
+                                ],
+                                subject: "Recuperación de contraseña",
+                                htmlContent: `
+                                    <h3>Recuperar contraseña</h3>
+                                    <p>Hola ${user.username},</p>
+                                    <p>Haz clic en el siguiente enlace:</p>
+                                    <a href="${link}">Restablecer contraseña</a>
+                                    <p>Este enlace expira en 15 minutos.</p>
+                                `
+                            },
+                            {
+                                headers: {
+                                    "api-key": process.env.BREVO_API_KEY,
+                                    "Content-Type": "application/json"
+                                }
+                            }
+                        );
 
                         res.json({
                             mensaje: "Correo enviado correctamente 📩"
                         });
-                    });
+
+                    } catch (error) {
+                        console.error("❌ Error enviando correo:", error.response?.data || error.message);
+
+                        res.status(500).json({
+                            mensaje: "Error enviando correo ❌"
+                        });
+                    }
                 }
             );
         }
@@ -1029,18 +1026,3 @@ app.put("/usuarios/:id", (req, res) => {
     });
 });
 
-app.get("/test-email", async (req, res) => {
-    try {
-        await transporter.sendMail({
-            from: `"Test" <${process.env.EMAIL_USER}>`,
-            to: process.env.EMAIL_USER,
-            subject: "PRUEBA REAL",
-            text: "Si ves esto, funciona"
-        });
-
-        res.send("✅ Correo enviado");
-    } catch (error) {
-        console.error("ERROR REAL:", error);
-        res.send("❌ Error");
-    }
-});
