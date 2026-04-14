@@ -19,7 +19,11 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-    }
+    },
+    tls: {
+        rejectUnauthorized: false
+    },
+    connectionTimeout: 10000
 });
 
 transporter.verify((error, success) => {
@@ -873,7 +877,7 @@ app.post("/recuperar-password", (req, res) => {
 
                     // 📩 Enviar correo
                     transporter.sendMail({
-                        from: "Sistema Marmotech<carlosdavidcuevas9810@gmail.com>",
+                        from: `"Sistema Marmotech" <${process.env.EMAIL_USER}>`,
                         to: user.email,
                         subject: "Recuperación de contraseña",
                         html: `
@@ -1022,4 +1026,20 @@ app.put("/usuarios/:id", (req, res) => {
             }
         );
     });
+});
+
+app.get("/test-email", async (req, res) => {
+    try {
+        await transporter.sendMail({
+            from: `"Test" <${process.env.EMAIL_USER}>`,
+            to: process.env.EMAIL_USER,
+            subject: "PRUEBA REAL",
+            text: "Si ves esto, funciona"
+        });
+
+        res.send("✅ Correo enviado");
+    } catch (error) {
+        console.error("ERROR REAL:", error);
+        res.send("❌ Error");
+    }
 });
