@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 console.log("EMAIL_USER:", process.env.EMAIL_USER);
+console.log(" NUEVA VERSION BACKEND ");
 console.log("INICIANDO SERVIDOR...");
 const express = require("express");
 const mysql = require("mysql2");
@@ -10,7 +11,7 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 
 
-// comemmy
+
 const transporter = nodemailer.createTransport({
     host: "smtp-relay.brevo.com",
     port: 587,
