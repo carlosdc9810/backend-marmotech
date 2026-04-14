@@ -873,7 +873,7 @@ app.post("/recuperar-password", (req, res) => {
 
                     // 📩 Enviar correo
                     transporter.sendMail({
-                        from: "Sistema Marmotech",
+                        from: "Sistema Marmotech<carlosdavidcuevas9810@gmail.com>",
                         to: user.email,
                         subject: "Recuperación de contraseña",
                         html: `
