@@ -855,7 +855,7 @@ app.post("/recuperar-password", (req, res) => {
                     }
 
                     //  Link de recuperación
-                    const link = `http://localhost:3000/reset-password.html?token=${token}`;
+                    const link = `${process.env.FRONTEND_URL}/reset-password.html?token=${token}`;
 
                     // 📩 Enviar correo
                     transporter.sendMail({
