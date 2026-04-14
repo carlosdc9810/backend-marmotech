@@ -14,13 +14,12 @@ const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
     host: "smtp-relay.brevo.com",
-    port: 465,
-    secure: true,
+    port: 587,
+    secure: false,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-    },
-    connectionTimeout: 10000
+    }
 });
 
 transporter.verify((error, success) => {
@@ -870,7 +869,7 @@ app.post("/recuperar-password", (req, res) => {
                     }
 
                     //  Link de recuperación
-                    const link = `${process.env.FRONTEND_URL}/pages/reset-password.html?token=${token}`;
+                    const link = `${process.env.FRONTEND_URL}/reset-password.html?token=${token}`;
 
                     // 📩 Enviar correo
                     transporter.sendMail({
