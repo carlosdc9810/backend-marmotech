@@ -817,8 +817,8 @@ app.post("/recuperar-password", (req, res) => {
 
     // Buscar usuario
     db.query(
-        "SELECT * FROM usuarios WHERE username = ? AND email = ?",
-        [username, email],
+        "SELECT * FROM usuarios WHERE email = ?",
+[email],
         async (err, result) => {
 
             if (err) {
